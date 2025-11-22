@@ -5,4 +5,7 @@ numpy
 pillow
 gdown
 python-multipart
-gradio==3.50.2
+gradio==4.42.0
+audioop-lts==0.2.1
+pydub==0.25.1
+matplotlib
