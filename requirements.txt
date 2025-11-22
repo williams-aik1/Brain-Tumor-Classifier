@@ -5,5 +5,4 @@ numpy
 pillow
 gdown
 python-multipart
-gradio
-
+gradio==4.42.0
