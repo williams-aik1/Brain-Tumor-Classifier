@@ -1,7 +1,8 @@
+tensorflow-cpu==2.12.0
 fastapi
 uvicorn
 numpy
 pillow
-tensorflow-cpu==2.16.1
-keras
 gdown
+python-multipart
+gradio
