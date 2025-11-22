@@ -5,6 +5,8 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import gradio as gr
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 MODEL_PATH = "brain_tumor_model.keras"
 
@@ -129,4 +131,12 @@ It is NOT a medical diagnostic tool and must NOT be used for clinical decisions.
     theme="soft"
 )
 
-app = gr.mount_gradio_app(app, demo, path="/dashboard")
+# GRADIO MOUNT FIX
+from gradio.routes import mount_gradio_app
+
+@app.get("/gradio")
+def gradio_app():
+    return {"url": "/dashboard"}
+
+mount_gradio_app(app, demo, path="/dashboard")
+
