@@ -6,6 +6,7 @@ pillow
 gdown
 python-multipart
 gradio==4.42.0
+huggingface_hub==0.20.3
 audioop-lts==0.2.1
 pydub==0.25.1
 matplotlib
