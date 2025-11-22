@@ -1,7 +1,7 @@
 services:
   - type: web
-    name: brain-tumor-api
+    name: brain-tumor-classifier
     env: python
     runtime: python3.10
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "uvicorn app:app --host 0.0.0.0 --port $PORT"
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host=0.0.0.0 --port=$PORT
