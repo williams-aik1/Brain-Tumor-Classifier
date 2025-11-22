@@ -5,8 +5,6 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import gradio as gr
-from fastapi.staticfiles import StaticFiles
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 MODEL_PATH = "brain_tumor_model.keras"
 
