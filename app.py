@@ -5,17 +5,18 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 import gradio as gr
+from gradio import FastAPIApp   # NEW FIX
 
 MODEL_PATH = "brain_tumor_model.keras"
 
-# Load saved model
+# Load model
 model = load_model(MODEL_PATH)
 
 CLASS_NAMES = ["glioma_tumor", "meningioma_tumor", "no_tumor", "pituitary_tumor"]
 
 app = FastAPI()
 
-# CORS for public access
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,21 +33,19 @@ def preprocess(img):
 def predict_image(img):
     processed = preprocess(img)
     preds = model.predict(processed)[0]
-    class_index = np.argmax(preds)
-    confidence = float(preds[class_index])
-    return CLASS_NAMES[class_index], confidence
+    idx = np.argmax(preds)
+    return CLASS_NAMES[idx], float(preds[idx])
 
-# ---------------------------
-#  GRAD-CAM IMPLEMENTATION
-# ---------------------------
-
+# ------------------------------
+# GRAD-CAM IMPLEMENTATION
+# ------------------------------
 def generate_gradcam(img, layer_name=None):
     img_array = preprocess(img)
 
-    # Pick last conv layer automatically
+    # Auto-detect last Conv layer
     if layer_name is None:
         for layer in reversed(model.layers):
-            if len(layer.output_shape) == 4:  # Conv layer has 4D output
+            if len(layer.output_shape) == 4:
                 layer_name = layer.name
                 break
 
@@ -57,33 +56,25 @@ def generate_gradcam(img, layer_name=None):
 
     with tf.GradientTape() as tape:
         conv_outputs, predictions = grad_model(img_array)
-        pred_index = tf.argmax(predictions[0])
-        loss = predictions[:, pred_index]
+        pred_idx = tf.argmax(predictions[0])
+        loss = predictions[:, pred_idx]
 
     grads = tape.gradient(loss, conv_outputs)[0]
-    pooled_grads = tf.reduce_mean(grads, axis=(0,1))
-
+    pooled_grads = tf.reduce_mean(grads, axis=(0, 1))
     conv_outputs = conv_outputs[0]
-    heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
 
-    # Normalize 0–1
-    heatmap = np.maximum(heatmap, 0) / np.max(heatmap)
+    heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
+    heatmap = np.maximum(heatmap, 0)
+    heatmap = heatmap / np.max(heatmap)
     heatmap = np.uint8(255 * heatmap)
 
-    # Resize heatmap to original image
     heatmap_img = Image.fromarray(heatmap).resize(img.size)
     heatmap_img = heatmap_img.convert("RGB")
+    return np.array(heatmap_img)
 
-    # Apply color map
-    heatmap_img = np.array(heatmap_img)
-    heatmap_img = np.uint8(255 * heatmap_img / np.max(heatmap_img))
-    
-    return heatmap_img
-
-# ---------------------------
-#  API ENDPOINTS
-# ---------------------------
-
+# ------------------------------
+# API ENDPOINTS
+# ------------------------------
 @app.get("/")
 def home():
     return {"message": "Brain Tumor Classifier API is running!"}
@@ -94,18 +85,13 @@ async def predict(file: UploadFile = File(...)):
     label, conf = predict_image(img)
     return {"prediction": label, "confidence": conf}
 
-# ---------------------------
-#  GRADIO DASHBOARD
-# ---------------------------
-
+# ------------------------------
+# GRADIO UI
+# ------------------------------
 def gradio_ui(img):
     label, conf = predict_image(img)
     heatmap = generate_gradcam(img)
-
-    return (
-        f"Prediction: {label} (Confidence: {round(conf,4)})",
-        heatmap
-    )
+    return f"Prediction: {label} (Confidence: {round(conf,4)})", heatmap
 
 demo = gr.Interface(
     fn=gradio_ui,
@@ -118,23 +104,18 @@ demo = gr.Interface(
     description="""
 ### Upload an MRI image to classify the tumor type.
 
-This tool predicts **Glioma, Meningioma, Pituitary**, or **No Tumor**  
-and shows a **Grad-CAM heatmap** of the region influencing the model.
+This tool predicts **Glioma, Meningioma, Pituitary**, or **No Tumor**,  
+and generates a **Grad-CAM heatmap** showing the influential regions.
 
 ⚠️ **DISCLAIMER:**  
-*This tool is for strictly educational and research purposes only.  
-It is NOT a medical diagnostic tool and must NOT be used for clinical decisions.*
+_This tool is for educational and research purposes only.  
+It is NOT a medical diagnostic tool._
 """,
     allow_flagging="never",
-    theme="soft"
 )
 
-# GRADIO MOUNT FIX
-from gradio.routes import mount_gradio_app
-
-@app.get("/gradio")
-def gradio_app():
-    return {"url": "/dashboard"}
-
-mount_gradio_app(app, demo, path="/dashboard")
-
+# ------------------------------
+# FIXED MOUNT (Fully Working)
+# ------------------------------
+gradio_app = FastAPIApp(demo)
+app.mount("/dashboard", gradio_app)
