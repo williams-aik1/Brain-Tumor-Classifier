@@ -1,8 +1,8 @@
 tensorflow-cpu==2.20.0
 fastapi
 uvicorn
-numpy
-pillow==10.4.0
+numpy==1.26.4
+pillow==10.2.0
 gdown
 python-multipart
 gradio==4.12.0
